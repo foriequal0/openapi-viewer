@@ -1,4 +1,4 @@
-import React, { Dispatch, useEffect } from "react";
+import React, { Dispatch, useEffect, useState } from "react";
 import { NavLink, useHistory, useLocation, useRouteMatch, Redirect } from "react-router-dom";
 import { RedocStandalone } from "redoc";
 import SwaggerUI from "swagger-ui-react";
@@ -6,15 +6,54 @@ import "swagger-ui-react/swagger-ui.css";
 
 import "./App.css";
 import { RouteParams, SelectionEvent, useSelectionState } from "./useSelectionState";
-import { documents, getDocumentGroup, OpenAPIDocument, OpenAPIDocumentGroup, OpenAPIDocumentGroups } from "./documents";
+import { getDocumentGroup, OpenAPIDocument, OpenAPIDocumentGroup, OpenAPIDocumentGroups } from "./documents";
+
+const URL = "https://raw.githubusercontent.com/foriequal0/openapi-viewer/master/documents.json";
+
+type FetchState<T> = { state: "LOADING" } | { state: "DONE"; value: T } | { state: "ERROR"; error: any };
 
 export default function App() {
+  const [documents, setDocuments] = useState<FetchState<OpenAPIDocumentGroups>>({
+    state: "LOADING",
+  });
+
+  useEffect(() => {
+    async function doFetch() {
+      try {
+        const fetched = await fetch(URL);
+        const parsed = JSON.parse(await fetched.text());
+        setDocuments({
+          state: "DONE",
+          value: parsed,
+        });
+      } catch (e) {
+        setDocuments({
+          state: "ERROR",
+          error: JSON.stringify(e, null, 4),
+        });
+      }
+    }
+
+    doFetch();
+  }, [URL]);
+
+  switch (documents.state) {
+    case "LOADING":
+      return <>LOADING {URL}</>;
+    case "DONE":
+      return <Root documents={documents.value} />;
+    case "ERROR":
+      return <>Error: {documents.error}</>;
+  }
+}
+
+function Root(props: { documents: OpenAPIDocumentGroups }) {
   const history = useHistory();
   const location = useLocation();
   const match = useRouteMatch<Partial<RouteParams>>(["/:groupId/:documentId*", "/:group", "/"]);
-  const groupId = match?.params?.groupId ?? documents[0].id;
-  const documentId = match?.params?.documentId ?? getDocumentGroup(documents, groupId).documents[0].id;
-  const [state, dispatch] = useSelectionState(documents, {
+  const groupId = match?.params?.groupId ?? props.documents[0].id;
+  const documentId = match?.params?.documentId ?? getDocumentGroup(props.documents, groupId).documents[0].id;
+  const [state, dispatch] = useSelectionState(props.documents, {
     groupId,
     documentId,
   });
@@ -50,7 +89,7 @@ export default function App() {
 
   return (
     <>
-      <Header documents={documents} group={state.group} document={state.document} onChange={onChange} />
+      <Header documents={props.documents} group={state.group} document={state.document} onChange={onChange} />
       <UIContainer ui={ui} url={state.document.url} />
     </>
   );
