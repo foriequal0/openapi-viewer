@@ -12,7 +12,7 @@ import {
   getDocumentGroup,
   OpenAPIDocument,
   OpenAPIDocumentGroup,
-  OpenAPIDocumentGroups,
+  OpenAPIDocumentIndex,
   openAPIDocumentGroupsSchema,
 } from "./documents";
 
@@ -21,7 +21,7 @@ const URL = "https://raw.githubusercontent.com/foriequal0/openapi-viewer/master/
 type FetchState<T> = { state: "LOADING" } | { state: "DONE"; value: T } | { state: "ERROR"; error: any };
 
 export default function App() {
-  const [documents, setDocuments] = useState<FetchState<OpenAPIDocumentGroups>>({
+  const [index, setIndex] = useState<FetchState<OpenAPIDocumentIndex>>({
     state: "LOADING",
   });
 
@@ -29,23 +29,23 @@ export default function App() {
     async function doFetch() {
       try {
         const fetched = await fetch(URL);
-        const parsed = yaml.safeLoad(await fetched.text());
+        const index = yaml.safeLoad(await fetched.text());
 
         const ajv = new Ajv();
-        const valid = ajv.validate(openAPIDocumentGroupsSchema, parsed);
+        const valid = ajv.validate(openAPIDocumentGroupsSchema, index);
         if (valid) {
-          setDocuments({
+          setIndex({
             state: "DONE",
-            value: parsed,
+            value: index,
           });
         } else {
-          setDocuments({
+          setIndex({
             state: "ERROR",
             error: `Documents index parse error: ${JSON.stringify(ajv.errors, null, 4)}`,
           });
         }
       } catch (e) {
-        setDocuments({
+        setIndex({
           state: "ERROR",
           error: JSON.stringify(e, null, 4),
         });
@@ -55,23 +55,23 @@ export default function App() {
     doFetch();
   }, [URL]);
 
-  switch (documents.state) {
+  switch (index.state) {
     case "LOADING":
       return <>LOADING {URL}</>;
     case "DONE":
-      return <Root documents={documents.value} />;
+      return <Root index={index.value} />;
     case "ERROR":
-      return <>Error: {documents.error}</>;
+      return <>Error: {index.error}</>;
   }
 }
 
-function Root(props: { documents: OpenAPIDocumentGroups }) {
+function Root(props: { index: OpenAPIDocumentIndex }) {
   const history = useHistory();
   const location = useLocation();
   const match = useRouteMatch<Partial<RouteParams>>(["/:groupId/:documentId*", "/:group", "/"]);
-  const groupId = match?.params?.groupId ?? props.documents[0].id;
-  const documentId = match?.params?.documentId ?? getDocumentGroup(props.documents, groupId).documents[0].id;
-  const [state, dispatch] = useSelectionState(props.documents, {
+  const groupId = match?.params?.groupId ?? props.index[0].id;
+  const documentId = match?.params?.documentId ?? getDocumentGroup(props.index, groupId).documents[0].id;
+  const [state, dispatch] = useSelectionState(props.index, {
     groupId,
     documentId,
   });
@@ -107,14 +107,14 @@ function Root(props: { documents: OpenAPIDocumentGroups }) {
 
   return (
     <>
-      <Header documents={props.documents} group={state.group} document={state.document} onChange={onChange} />
+      <Header index={props.index} group={state.group} document={state.document} onChange={onChange} />
       <UIContainer ui={ui} url={state.document.url} />
     </>
   );
 }
 
 function Header(props: {
-  documents: OpenAPIDocumentGroups;
+  index: OpenAPIDocumentIndex;
   group: OpenAPIDocumentGroup;
   document: OpenAPIDocument;
   onChange: Dispatch<SelectionEvent>;
@@ -124,7 +124,7 @@ function Header(props: {
       <span>OpenAPI Viewer</span>
       <div className="doc-selectors">
         <select value={props.group.id} onChange={(e) => props.onChange({ type: "group", value: e.target.value })}>
-          {props.documents.map((group) => (
+          {props.index.map((group) => (
             <option key={group.id} value={group.id}>
               {group.name}
             </option>

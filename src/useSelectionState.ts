@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { getDocument, OpenAPIDocument, OpenAPIDocumentGroup, OpenAPIDocumentGroups } from "./documents";
+import { getDocument, OpenAPIDocument, OpenAPIDocumentGroup, OpenAPIDocumentIndex } from "./documents";
 
 export type SelectionEvent =
   | { type: "group" | "document"; value: string }
@@ -18,7 +18,7 @@ export type RouteParams = {
 };
 
 export function useSelectionState(
-  documents: OpenAPIDocumentGroups,
+  documents: OpenAPIDocumentIndex,
   routeParams: RouteParams
 ): [State, (event: SelectionEvent) => State] {
   const [state, setState] = useState(() => {
