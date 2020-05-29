@@ -7,6 +7,7 @@
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",
     "ajv": "^6.12.2",
+    "js-yaml": "^3.14.0",
     "mobx": "^5.15.4",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
@@ -19,12 +20,15 @@
     "typescript": "^3.9.3"
   },
   "devDependencies": {
+    "@types/ajv": "^1.0.0",
     "@types/jest": "^24.0.0",
+    "@types/js-yaml": "^3.12.4",
     "@types/node": "^12.0.0",
     "@types/react": "^16.9.0",
     "@types/react-dom": "^16.9.0",
     "@types/react-router-dom": "^5.1.5",
     "@types/swagger-ui-react": "^3.23.2",
+    "json-schema": "^0.2.5",
     "prettier": "^2.0.5"
   },
   "scripts": {

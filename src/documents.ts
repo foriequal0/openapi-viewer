@@ -1,9 +1,32 @@
+import { JSONSchema7 } from "json-schema";
+
 export type OpenAPIDocumentGroups = OpenAPIDocumentGroup[];
 export type OpenAPIDocumentGroup = { id: string; name: string; documents: OpenAPIDocument[] };
 export type OpenAPIDocument = {
   id: string;
   name: string;
   url: string;
+};
+
+const documentSchema: JSONSchema7 = {
+  type: "object",
+  properties: {
+    id: { type: "string" },
+    name: { type: "string" },
+    url: { type: "string" },
+  },
+};
+
+export const openAPIDocumentGroupsSchema: JSONSchema7 = {
+  type: "array",
+  items: {
+    type: "object",
+    properties: {
+      id: { type: "string" },
+      name: { type: "string" },
+      documents: { type: "array", items: documentSchema },
+    },
+  },
 };
 
 export function getDocumentGroup(documents: OpenAPIDocumentGroups, groupId: string) {

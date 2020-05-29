@@ -3,12 +3,20 @@ import { NavLink, useHistory, useLocation, useRouteMatch, Redirect } from "react
 import { RedocStandalone } from "redoc";
 import SwaggerUI from "swagger-ui-react";
 import "swagger-ui-react/swagger-ui.css";
+import yaml from "js-yaml";
+import Ajv from "ajv";
 
 import "./App.css";
 import { RouteParams, SelectionEvent, useSelectionState } from "./useSelectionState";
-import { getDocumentGroup, OpenAPIDocument, OpenAPIDocumentGroup, OpenAPIDocumentGroups } from "./documents";
+import {
+  getDocumentGroup,
+  OpenAPIDocument,
+  OpenAPIDocumentGroup,
+  OpenAPIDocumentGroups,
+  openAPIDocumentGroupsSchema,
+} from "./documents";
 
-const URL = "https://raw.githubusercontent.com/foriequal0/openapi-viewer/master/documents.json";
+const URL = "https://raw.githubusercontent.com/foriequal0/openapi-viewer/master/documents.yaml";
 
 type FetchState<T> = { state: "LOADING" } | { state: "DONE"; value: T } | { state: "ERROR"; error: any };
 
@@ -21,11 +29,21 @@ export default function App() {
     async function doFetch() {
       try {
         const fetched = await fetch(URL);
-        const parsed = JSON.parse(await fetched.text());
-        setDocuments({
-          state: "DONE",
-          value: parsed,
-        });
+        const parsed = yaml.safeLoad(await fetched.text());
+
+        const ajv = new Ajv();
+        const valid = ajv.validate(openAPIDocumentGroupsSchema, parsed);
+        if (valid) {
+          setDocuments({
+            state: "DONE",
+            value: parsed,
+          });
+        } else {
+          setDocuments({
+            state: "ERROR",
+            error: `Documents index parse error: ${JSON.stringify(ajv.errors, null, 4)}`,
+          });
+        }
       } catch (e) {
         setDocuments({
           state: "ERROR",
