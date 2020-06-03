@@ -3,7 +3,7 @@ import { NavLink, useHistory, useLocation, useRouteMatch, Redirect } from "react
 import { RedocStandalone } from "redoc";
 import SwaggerUI from "swagger-ui-react";
 import "swagger-ui-react/swagger-ui.css";
-import yaml from "js-yaml";
+import yaml, {JSON_SCHEMA} from "js-yaml";
 import Ajv from "ajv";
 
 import "./App.css";
@@ -27,29 +27,39 @@ export default function App() {
 
   useEffect(() => {
     async function doFetch() {
-      try {
-        const fetched = await fetch(URL);
-        const index = yaml.safeLoad(await fetched.text());
-
-        const ajv = new Ajv();
-        const valid = ajv.validate(openAPIDocumentGroupsSchema, index);
-        if (valid) {
-          setIndex({
-            state: "DONE",
-            value: index,
-          });
-        } else {
-          setIndex({
-            state: "ERROR",
-            error: `Documents index parse error: ${JSON.stringify(ajv.errors, null, 4)}`,
-          });
-        }
-      } catch (e) {
+      const fetched = await fetch(URL);
+      if (fetched.status >= 400) {
         setIndex({
           state: "ERROR",
-          error: JSON.stringify(e, null, 4),
+          error: `Document fetch error: ${await fetched.text()}`,
         });
+        return;
       }
+
+      let index;
+      try {
+        index = yaml.safeLoad(await fetched.text(), {schema: JSON_SCHEMA});
+      } catch(e) {
+        setIndex({
+          state: "ERROR",
+          error: `YAML parse error: ${e}`,
+        });
+        return;
+      }
+
+      const ajv = new Ajv();
+      const valid = ajv.validate(openAPIDocumentGroupsSchema, index);
+      if (!valid) {
+        setIndex({
+          state: "ERROR",
+          error: `Documents index parse error: ${JSON.stringify(ajv.errors, null, 4)}`,
+        });
+        return;
+      }
+      setIndex({
+        state: "DONE",
+        value: index,
+      });
     }
 
     doFetch();
@@ -57,11 +67,22 @@ export default function App() {
 
   switch (index.state) {
     case "LOADING":
-      return <>LOADING {URL}</>;
+      return <>
+        <DummyHeader />
+        <div className="ui-container loading">
+          LOADING {URL}
+        </div>
+      </>;
     case "DONE":
       return <Root index={index.value} />;
     case "ERROR":
-      return <>Error: {index.error}</>;
+      return <>
+        <DummyHeader />
+        <div className="ui-container error">
+          <p>URL: {URL}</p>
+          <p>{index.error}</p>
+        </div>
+      </>;
   }
 }
 
@@ -113,6 +134,23 @@ function Root(props: { index: OpenAPIDocumentIndex }) {
   );
 }
 
+function DummyHeader() {
+  return (
+    <header>
+      <span>OpenAPI Viewer</span>
+      <div className="doc-selectors">
+        <select>
+          <option>Group</option>
+        </select>
+        <select>
+          <option>Document</option>
+        </select>
+      </div>
+      <Navigation/>
+    </header>
+  );
+}
+
 function Header(props: {
   index: OpenAPIDocumentIndex;
   group: OpenAPIDocumentGroup;
@@ -143,7 +181,7 @@ function Header(props: {
   );
 }
 
-function Navigation(props: { group: OpenAPIDocumentGroup; document: OpenAPIDocument }) {
+function Navigation(props: { group?: OpenAPIDocumentGroup; document?: OpenAPIDocument }) {
   function isActive(self: string) {
     return (match: any, location: any) => {
       const searchParams = new URLSearchParams(location.search);
@@ -158,7 +196,7 @@ function Navigation(props: { group: OpenAPIDocumentGroup; document: OpenAPIDocum
         <li>
           <NavLink
             to={{
-              pathname: `/${props.group.id}/${props.document.id}`,
+              pathname: (props.group && props.document) ? `/${props.group.id}/${props.document.id}` : undefined,
               search: "?ui=redoc",
             }}
             activeClassName="selected-ui"
@@ -170,7 +208,7 @@ function Navigation(props: { group: OpenAPIDocumentGroup; document: OpenAPIDocum
         <li>
           <NavLink
             to={{
-              pathname: `/${props.group.id}/${props.document.id}`,
+              pathname: (props.group && props.document) ? `/${props.group.id}/${props.document.id}` : undefined,
               search: "?ui=swagger&deepLinking=true",
             }}
             activeClassName="selected-ui"

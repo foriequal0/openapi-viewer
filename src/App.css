@@ -13,6 +13,16 @@ header + .ui-container {
   padding-top: 3em;
 }
 
+.ui-container.loading {
+  padding-top: 5em;
+  text-align: center;
+}
+
+.ui-container.error {
+  padding-top: 5em;
+  text-align: center;
+}
+
 .redoc .menu-content {
   top: 4em !important;
   contain: none !important; /* Chrome 에서 flexbox 안에 sticky 가 작동 안하는 문제를 일으킴 */
